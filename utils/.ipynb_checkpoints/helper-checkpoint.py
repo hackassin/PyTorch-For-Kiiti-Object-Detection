@@ -70,8 +70,8 @@ def save_newimgdata(image_info):
                  image_info['img_bboxes'])
     
 def conv2uint8(image_arr):
-    image_arr = cv2.cvtColor(image_arr.
-                             astype("float32"), cv2.COLOR_BGR2RGB)
+    """image_arr = cv2.cvtColor(image_arr.
+                             astype("float32"), cv2.COLOR_BGR2RGB)"""
     return (image_arr * 255).astype(np.uint8)
 
 # Resize images to (960,544)
@@ -79,9 +79,9 @@ def resize_img_bbox(img_lb_tupl,dim):
     imgf, labelf = img_lb_tupl
     width, height = dim
     # resize image
-    #img = Image.open(imgf)
-    #img_arr = np.array(image)
-    img_arr = cv2.imread(imgf, cv2.IMREAD_UNCHANGED)
+    img_arr = cv2.imread(imgf)/255
+    # convert to rgb
+    img_arr = cv2.cvtColor(img_arr.astype('float32'), cv2.COLOR_BGR2RGB)
     h0 = img_arr.shape[0]
     w0 = img_arr.shape[1]
     # img = img.resize((width,height))
