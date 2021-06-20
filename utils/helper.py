@@ -98,6 +98,7 @@ def resize_img_bbox(img_lb_tupl,dim):
     bboxes[:,[1,3]] = bboxes[:,[1,3]] * scale_y
     return img_arr,bboxes
 
+# Returns image and label path tuple
 def imlabel(impath, labels_path):
     #impath = 'data/kitti/custom_annotated/annotated_images/'
     #labels_path = 'data/kitti/custom_annotated/labels/'
@@ -110,3 +111,41 @@ def imlabel(impath, labels_path):
         entity[1] = labels_path + entity[1]
         imlabel_list.append(tuple(entity))
     return imlabel_list
+
+# Draw bbox on image
+# Ref from Paperspace blog
+def draw_bbox(img, cords, color = None):
+    """Draw the rectangle on the image
+    
+    Parameters
+    ----------
+    
+    img : numpy.ndarray
+        numpy image 
+    
+    cords: numpy.ndarray
+        Numpy array containing bounding boxes of shape `N X 4` where N is the 
+        number of bounding boxes and the bounding boxes are represented in the
+        format `x1 y1 x2 y2`
+        
+    Returns
+    -------
+    
+    numpy.ndarray
+        numpy image with bounding boxes drawn on it
+        
+    """    
+    img = img.copy()
+    
+    cords = cords.reshape(-1,4)
+    if not color:
+        color = [255,255,255]
+    for cord in cords:
+        
+        pt1, pt2 = (cord[0], cord[1]) , (cord[2], cord[3])
+                
+        pt1 = int(pt1[0]), int(pt1[1])
+        pt2 = int(pt2[0]), int(pt2[1])
+    
+        img = cv2.rectangle(img, pt1, pt2, color, int(max(img.shape[:2])/200))
+    return img
