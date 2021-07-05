@@ -9,22 +9,28 @@ import numpy as np
 def readfile(path):
     file = open(path, 'r')
     return file
-
+def filter_classes(bboxes,classes):
+    for class in classes:
+        
 # defintion to fetch bounding boxes
-def fetch_bboxes(path):
+def fetch_bbox_lb(path):
     file = readfile(path)
     lines = file.readlines()
     # print(lines)
-    bboxes = np.empty([len(lines),5], dtype=float)
-    
+    bboxes = np.empty([len(lines),4], dtype=float)
+    classes = []
     for i,line in enumerate(lines):
         # print(line)
         line = line.split()[0] + ' ' + ' '.join(line.split()[4:8])
         line = line.split()
         bboxes[i,:4] = line[1:]
-    return bboxes
+        classes.append(line.split()[0])
+    
+    bboxes, classes = filter_classes(bboxes,classes)
+    
+    return bboxes, np.array(classes)
 
-def fetch_classes(path):
+"""def fetch_classes(path):
     file = readfile(path)
     lines = file.readlines()
     # print(lines)
@@ -34,7 +40,7 @@ def fetch_classes(path):
         # print(line)
         item = line.split()[0]
         classes.append(item)
-    return classes
+    return classes"""
 
 # defintion to fetch a random number
 def gen_rand_num(begin,end):
