@@ -5,12 +5,11 @@
 import os
 import cv2
 import numpy as np
+import random
 
 def readfile(path):
     file = open(path, 'r')
     return file
-def filter_classes(bboxes,classes):
-    for class in classes:
         
 # defintion to fetch bounding boxes
 def fetch_bbox_lb(path):
@@ -24,9 +23,7 @@ def fetch_bbox_lb(path):
         line = line.split()[0] + ' ' + ' '.join(line.split()[4:8])
         line = line.split()
         bboxes[i,:4] = line[1:]
-        classes.append(line.split()[0])
-    
-    bboxes, classes = filter_classes(bboxes,classes)
+        classes.append(line[0])    
     
     return bboxes, np.array(classes)
 
@@ -99,7 +96,7 @@ def resize_img_bbox(img_lb_tupl,dim):
     scale_x = height/h0
     scale_y = width/w0
     # resize bbox
-    bboxes = fetch_bboxes(labelf)
+    bboxes, _ = fetch_bbox_lb(labelf)
     bboxes[:,[0,2]] = bboxes[:,[0,2]] * scale_x
     bboxes[:,[1,3]] = bboxes[:,[1,3]] * scale_y
     return img_arr,bboxes

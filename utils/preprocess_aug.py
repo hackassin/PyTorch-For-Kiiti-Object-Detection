@@ -1,4 +1,12 @@
-import helper
+import os
+import sys
+import cv2
+from PIL import Image,ImageEnhance
+import numpy as np
+file_dir = os.path.dirname('/workspace/experiment/utils/')
+sys.path.append(file_dir)
+from helper import fetch_bbox_lb, gen_rand_num
+from skimage import color
 # For resizing image
 def resize_dataset(imlabel_list, newimgdir, newlbdir):
     dim = (960,544)
@@ -22,7 +30,7 @@ class Spatial_Aug:
         self.image_arr = cv2.imread(image_path)/255
         # Convert to rgb float32, as opencv only works with float32
         self.image_arr = cv2.cvtColor(self.image_arr.astype("float32"), cv2.COLOR_BGR2RGB)
-        self.bboxes = fetch_bboxes(label_path)
+        self.bboxes, _ = fetch_bbox_lb(label_path)
         
     def hflip (self):
         # Fetching image width
@@ -65,7 +73,7 @@ class Color_Aug:
     def __init__(self, image_path, label_path):
         self.image_arr = cv2.imread(image_path)/255
         self.image_arr = cv2.cvtColor(self.image_arr.astype("float32"), cv2.COLOR_BGR2RGB)
-        self.bboxes = fetch_bboxes(label_path)
+        self.bboxes, _ = fetch_bbox_lb(label_path)
     
     # definition to rotate hue of image
     def hue_rotate(self, hue_rot_max=0.5):    
