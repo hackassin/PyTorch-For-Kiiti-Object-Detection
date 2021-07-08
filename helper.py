@@ -5,26 +5,29 @@
 import os
 import cv2
 import numpy as np
+import random
 
 def readfile(path):
     file = open(path, 'r')
     return file
-
+        
 # defintion to fetch bounding boxes
-def fetch_bboxes(path):
+def fetch_bbox_lb(path):
     file = readfile(path)
     lines = file.readlines()
     # print(lines)
-    bboxes = np.empty([len(lines),5], dtype=float)
-    
+    bboxes = np.empty([len(lines),4], dtype=float)
+    classes = []
     for i,line in enumerate(lines):
         # print(line)
         line = line.split()[0] + ' ' + ' '.join(line.split()[4:8])
         line = line.split()
         bboxes[i,:4] = line[1:]
-    return bboxes
+        classes.append(line[0])    
+    
+    return bboxes, np.array(classes)
 
-def fetch_classes(path):
+"""def fetch_classes(path):
     file = readfile(path)
     lines = file.readlines()
     # print(lines)
@@ -34,7 +37,7 @@ def fetch_classes(path):
         # print(line)
         item = line.split()[0]
         classes.append(item)
-    return classes
+    return classes"""
 
 # defintion to fetch a random number
 def gen_rand_num(begin,end):
@@ -93,9 +96,9 @@ def resize_img_bbox(img_lb_tupl,dim):
     scale_x = height/h0
     scale_y = width/w0
     # resize bbox
-    bboxes = fetch_bboxes(labelf)
-    bboxes[:,[0,2]] = bboxes[:,[0,2]] * scale_x
-    bboxes[:,[1,3]] = bboxes[:,[1,3]] * scale_y
+    bboxes, _ = fetch_bbox_lb(labelf)
+    bboxes[:,[0,2]] = bboxes[:,[0,2]] * scale_y
+    bboxes[:,[1,3]] = bboxes[:,[1,3]] * scale_x
     return img_arr,bboxes
 
 # Returns image and label path tuple
@@ -114,7 +117,7 @@ def imlabel(impath, labels_path):
 
 # Draw bbox on image
 # Ref from Paperspace blog
-def draw_bbox(img, cords, color = None):
+def draw_bbox(img, cords, labels, color = None):
     """Draw the rectangle on the image
     
     Parameters
@@ -138,14 +141,16 @@ def draw_bbox(img, cords, color = None):
     img = img.copy()
     
     cords = cords.reshape(-1,4)
+    font = cv2.FONT_HERSHEY_SIMPLEX
     if not color:
         color = [255,255,255]
-    for cord in cords:
+    for i,cord in enumerate(cords):
         
         pt1, pt2 = (cord[0], cord[1]) , (cord[2], cord[3])
                 
         pt1 = int(pt1[0]), int(pt1[1])
         pt2 = int(pt2[0]), int(pt2[1])
-    
+        label_pt = int(cord[0]+10),int(cord[1]+10)
         img = cv2.rectangle(img, pt1, pt2, color, int(max(img.shape[:2])/200))
+        img = cv2.putText(img, labels[i],label_pt, font, 0.5,(255,255,255),1,cv2.LINE_AA)
     return img
