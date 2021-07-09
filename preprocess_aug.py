@@ -1,17 +1,20 @@
 import os
 import sys
+import time
 import cv2
 from PIL import Image,ImageEnhance
 import numpy as np
 file_dir = os.path.dirname('/workspace/experiment/utils/')
 sys.path.append(file_dir)
 from helper import fetch_bbox_lb, gen_rand_num, resize_img_bbox
+from helper import save_newimgdata
 from skimage import color
+from tqdm.notebook import tqdm_notebook as tqnb
 # For resizing image
-def resize_dataset(imlabel_list, newimgdir, newlbdir):
-    dim = (960,544)
+def resize_dataset(imlabel_list, newpath, dim):
+    # dim = (960,544)
     resizeimg_info = {}
-
+    newimgdir, newlbdir = newpath
     for item,bar in zip(imlabel_list,tqnb(range(len(imlabel_list)),desc='Resizing Images')):
         resize_imgname = os.path.basename(item[0])[:-4] + '_resized'
         resize_lbboxnm = os.path.basename(item[1])[:-4] + '_resized'
@@ -20,7 +23,7 @@ def resize_dataset(imlabel_list, newimgdir, newlbdir):
         resizeimg_info['newlabel_path'] = newlbdir + resize_lbboxnm
         resizeimg_info['origlabel_path'] = item[1]
 
-        helper.save_newimgdata(resizeimg_info)
+        save_newimgdata(resizeimg_info)
         time.sleep(0.000015)
 
 

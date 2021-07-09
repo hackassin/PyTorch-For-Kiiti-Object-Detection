@@ -90,7 +90,7 @@ def resize_img_bbox(img_lb_tupl,dim):
     # img = img.resize((width,height))
     img_arr =  cv2.resize(img_arr,(width,height))
     # img_arr = cv2.cvtColor(img_arr, cv2.COLOR_BGR2RGB)
-    print("Updated dimensions: ", img_arr.shape)
+    # print("Updated dimensions: ", img_arr.shape)
     # Scale factor in x and y axis
     # of resized image
     scale_x = height/h0
