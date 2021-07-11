@@ -14,24 +14,23 @@ from tqdm.notebook import tqdm_notebook as tqnb
 
 
 # For resizing image
-def resize_dataset(df, newpath, dim):
+def resize_dataset(df2, newpath, dim):
     # dim = (960,544)
     resizeimg_info = {}
     newimgdir, newlbdir = newpath
-    for item,bar in zip(df[['image_path', 'label_path']].values,tqnb(range(len(df)),desc='Resizing Images')):
+    for item,bar in zip(df2[['image_path', 'label_path']].values,tqnb(range(len(df2)),desc='Resizing Images')):
         resize_imgname = os.path.basename(item[0])[:-4] + '_resized'
         resize_lbboxnm = os.path.basename(item[1])[:-4] + '_resized'
         resizeimg_info['image_arr'], resizeimg_info['img_bboxes'] = resize_img_bbox((item[0],item[1]),dim, 
-                                                                                    df.loc[df.image_path==item[0],'bboxes'].values[0])
-        resizeimg_info['classes'] = df.loc[df.image_path==item[0],'classes'].values[0] 
+                                                                                    df2.loc[df2.image_path==item[0],'bboxes'].values[0])
+        resizeimg_info['classes'] = df2.loc[df.image_path==item[0],'classes'].values[0] 
         resizeimg_info['newimg_path'] = newimgdir + resize_imgname
         resizeimg_info['newlabel_path'] = newlbdir + resize_lbboxnm
         resizeimg_info['origlabel_path'] = item[1]
-        # Update bbox values in dataframe as well
-        df3.loc[list(np.where(df3["image_path"] == path)[0])[0], 'bboxes'] = resizeimg_info['img_bboxes']
+        df2.loc[list(np.where(df2["image_path"] == path)[0])[0], 'bboxes'] = resizeimg_info['img_bboxes']
         save_newimgdata(resizeimg_info)
-        time.sleep(0.000015)
-
+        # time.sleep(0.000015)
+    return df2
 
 # For Spatial Augmentation
 class Spatial_Aug:
