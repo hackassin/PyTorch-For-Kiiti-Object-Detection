@@ -1,36 +1,48 @@
 import os
 import sys
+import time
 import cv2
 from PIL import Image,ImageEnhance
 import numpy as np
 file_dir = os.path.dirname('/workspace/experiment/utils/')
 sys.path.append(file_dir)
-from helper import fetch_bbox_lb, gen_rand_num
+from helper import fetch_bbox_lb, gen_rand_num, resize_img_bbox
+from helper import save_newimgdata, conv2f
 from skimage import color
-# For resizing image
-def resize_dataset(imlabel_list, newimgdir, newlbdir):
-    dim = (960,544)
-    resizeimg_info = {}
+from tqdm.notebook import tqdm_notebook as tqnb
 
-    for item,bar in zip(imlabel_list,tqnb(range(len(imlabel_list)),desc='Resizing Images')):
+
+
+# For resizing image
+def resize_dataset(df, newpath, dim):
+    # dim = (960,544)
+    resizeimg_info = {}
+    newimgdir, newlbdir = newpath
+    for item,bar in zip(df[['image_path', 'label_path']].values,tqnb(range(len(df)),desc='Resizing Images')):
         resize_imgname = os.path.basename(item[0])[:-4] + '_resized'
         resize_lbboxnm = os.path.basename(item[1])[:-4] + '_resized'
-        resizeimg_info['image_arr'], resizeimg_info['img_bboxes'] = resize_img_bbox((item[0],item[1]),dim)
+        resizeimg_info['image_arr'], resizeimg_info['img_bboxes'] = resize_img_bbox((item[0],item[1]),dim, 
+                                                                                    df.loc[df.image_path==item[0],'bboxes'].values[0])
+        resizeimg_info['classes'] = df.loc[df.image_path==item[0],'classes'].values[0] 
         resizeimg_info['newimg_path'] = newimgdir + resize_imgname
         resizeimg_info['newlabel_path'] = newlbdir + resize_lbboxnm
         resizeimg_info['origlabel_path'] = item[1]
-
-        helper.save_newimgdata(resizeimg_info)
+        # Update bbox values in dataframe as well
+        df3.loc[list(np.where(df3["image_path"] == path)[0])[0], 'bboxes'] = resizeimg_info['img_bboxes']
+        save_newimgdata(resizeimg_info)
         time.sleep(0.000015)
 
 
 # For Spatial Augmentation
 class Spatial_Aug:
-    def __init__(self, image_path, label_path):
-        self.image_arr = cv2.imread(image_path)/255
+    def __init__(self, image_path, label_path, dim = (512,512), truncated_boxes = None):
+        # self.image_arr = cv2.imread(image_path)/255
         # Convert to rgb float32, as opencv only works with float32
-        self.image_arr = cv2.cvtColor(self.image_arr.astype("float32"), cv2.COLOR_BGR2RGB)
-        self.bboxes, _ = fetch_bbox_lb(label_path)
+        # self.image_arr = cv2.cvtColor(self.image_arr.astype("float32"), cv2.COLOR_BGR2RGB)
+        # self.bboxes, _ = fetch_bbox_lb(label_path)
+        if truncated_boxes is None:
+            self.image_arr, self.bboxes = resize_img_bbox((image_path,label_path),dim)
+        else: self.image_arr, self.bboxes = resize_img_bbox((image_path,label_path),dim, truncated_boxes)    
         
     def hflip (self):
         # Fetching image width
@@ -60,8 +72,8 @@ class Spatial_Aug:
         # Making a transition matrix
         # Here the shift is Tx=Ty=8
         Tx,Ty = TxTy
-        rand_x = gen_rand_num(0,Tx)
-        rand_y = gen_rand_num(0,Ty)
+        rand_x = conv2f(gen_rand_num(0,Tx))
+        rand_y = conv2f(gen_rand_num(0,Ty))
         M = np.float32([[1,0,rand_x],[0,1,rand_y]])
         self.image_arr = cv2.warpAffine(self.image_arr,M,(cols,rows))
         self.bboxes[:,[0,2]] += rand_x
@@ -70,10 +82,11 @@ class Spatial_Aug:
     
 # For Color Augmentation
 class Color_Aug:
-    def __init__(self, image_path, label_path):
-        self.image_arr = cv2.imread(image_path)/255
-        self.image_arr = cv2.cvtColor(self.image_arr.astype("float32"), cv2.COLOR_BGR2RGB)
-        self.bboxes, _ = fetch_bbox_lb(label_path)
+    def __init__(self, image_path, label_path, dim = (512,512), truncated_boxes = None):
+        # Fetch values and resize images    
+        if truncated_boxes is None:
+            self.image_arr, self.bboxes = resize_img_bbox((image_path,label_path),dim)
+        else: self.image_arr, self.bboxes = resize_img_bbox((image_path,label_path),dim, truncated_boxes)
     
     # definition to rotate hue of image
     def hue_rotate(self, hue_rot_max=0.5):    
