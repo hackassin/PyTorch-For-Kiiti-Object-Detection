@@ -58,7 +58,7 @@ def save_newbbox(newlabel_path,orig_path,bboxes,classes):
         # line = line.split()
         line = []
         line.append(classes[i])
-        line.append(' '.join([str(bbox) for bbox in bboxes[i,:]]))
+        line.append(' '.join([str(conv2f(bbox)) for bbox in bboxes[i,:]]))
         line = ' '.join(line)
         line = line + '\n'
         labels.append(line)
@@ -82,7 +82,7 @@ def conv2uint8(image_arr):
                              astype("float32"), cv2.COLOR_BGR2RGB)"""
     return (image_arr * 255).astype(np.uint8)
 
-# Resize images to (960,544)
+# Resize images to dimensions specified
 def resize_img_bbox(img_lb_tupl,dim, trunc_boxes=None):
     imgf, labelf = img_lb_tupl
     width, height = dim
@@ -103,7 +103,7 @@ def resize_img_bbox(img_lb_tupl,dim, trunc_boxes=None):
     # resize bbox
     if trunc_boxes is not None:
         # print('Truncated bboxes.any: ', trunc_boxes)
-        bboxes = trunc_boxes 
+        bboxes = trunc_boxes
     else:
         # print('Truncated bboxes: ', trunc_boxes)
         bboxes, _ = fetch_bbox_lb(labelf)  

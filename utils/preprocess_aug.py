@@ -23,13 +23,15 @@ def resize_dataset(df2, newpath, dim):
         resize_lbboxnm = os.path.basename(item[1])[:-4] + '_resized'
         resizeimg_info['image_arr'], resizeimg_info['img_bboxes'] = resize_img_bbox((item[0],item[1]),dim, 
                                                                                     df2.loc[df2.image_path==item[0],'bboxes'].values[0])
-        resizeimg_info['classes'] = df2.loc[df.image_path==item[0],'classes'].values[0] 
+        resizeimg_info['classes'] = df2.loc[df2.image_path==item[0],'classes'].values[0] 
         resizeimg_info['newimg_path'] = newimgdir + resize_imgname
         resizeimg_info['newlabel_path'] = newlbdir + resize_lbboxnm
         resizeimg_info['origlabel_path'] = item[1]
-        df2.loc[list(np.where(df2["image_path"] == path)[0])[0], 'bboxes'] = resizeimg_info['img_bboxes']
+        # print('bboxes before update: ', df2.loc[list(np.where(df2["image_path"] == item[0])[0])[0], 'bboxes'])
+        df2.loc[list(np.where(df2["image_path"] == item[0])[0])[0], 'bboxes'] = resizeimg_info['img_bboxes']
+        # print('bboxes after update: ', df2.loc[list(np.where(df2["image_path"] == item[0])[0])[0], 'bboxes'])
         save_newimgdata(resizeimg_info)
-        # time.sleep(0.000015)
+        time.sleep(0.000015)
     return df2
 
 # For Spatial Augmentation
