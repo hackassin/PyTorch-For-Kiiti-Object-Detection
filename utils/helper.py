@@ -15,7 +15,7 @@ def conv2f(val):
     return float("{:.2f}".format(val))
         
 # defintion to fetch bounding boxes
-def fetch_bbox_lb(path):
+def fetch_bbox_lb(path, augflag=False):
     file = readfile(path)
     lines = file.readlines()
     # print(lines)
@@ -23,24 +23,14 @@ def fetch_bbox_lb(path):
     classes = []
     for i,line in enumerate(lines):
         # print(line)
-        line = line.split()[0] + ' ' + ' '.join(line.split()[4:8])
+        if augflag == False:
+            line = line.split()[0] + ' ' + ' '.join(line.split()[4:8])
+        else: line = line.split()[0] + ' ' + ' '.join(line.split()[1:])     
         line = line.split()
         bboxes[i,:4] = line[1:]
         classes.append(line[0])    
     
     return bboxes, np.array(classes)
-
-"""def fetch_classes(path):
-    file = readfile(path)
-    lines = file.readlines()
-    # print(lines)
-    classes = []
-    
-    for i,line in enumerate(lines):
-        # print(line)
-        item = line.split()[0]
-        classes.append(item)
-    return classes"""
 
 # defintion to fetch a random number
 def gen_rand_num(begin,end):

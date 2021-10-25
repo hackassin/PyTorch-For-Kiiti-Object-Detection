@@ -56,12 +56,10 @@ class_dict = {'car': 0,
               'bicycle': 3, 'cat': 4,
               'person': 5}
 
+
 def num_label(class_dict, classes):
     classes = [class_dict[x] for x in classes]
     return np.array(classes)
-
-df['classes'] = df.apply(lambda x: num_label(class_dict, x['classes']), axis=1)
-print(df.head())
 
 # #### Dataset Class
 
@@ -83,10 +81,12 @@ def det_collate(batch):
     # return np.array(imgs), np.array(boxes), np.array(classes)
     return torch.transpose(torch.tensor(imgs), 3, 1), np.array(boxes, dtype=object), np.array(classes, dtype=object)
 
+
 def normalize(im_arr):
     # Normalizes image with imagenet stats."""
     imagenet_stats = np.array([[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]], dtype=np.float32)
-    return (im_arr - imagenet_stats[0])/imagenet_stats[1]
+    return (im_arr - imagenet_stats[0]) / imagenet_stats[1]
+
 
 class ObjDetDataset(data.Dataset):
 
@@ -103,17 +103,20 @@ class ObjDetDataset(data.Dataset):
         image = normalize(image)
         height, width = image.shape[0:2]
         boxes = self.bboxes[index]
-        boxes[:,0::2] /= width
-        boxes[:,1::2] /= height
+        boxes[:, 0::2] /= width
+        boxes[:, 1::2] /= height
         labels = self.classes[index]
         return image, boxes, labels
 
     def __len__(self):
         return len(self.paths)
 
+
 # Training Dataset Split
 X = df.image_path
 y = df[['bboxes', 'classes']]
+
+
 # X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
 
@@ -144,6 +147,7 @@ class BasicBlock(nn.Module):
         out += self.downsample(x)
         out = self.relu2(out)
         return out
+
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=1000):
@@ -181,6 +185,7 @@ class ResNet(nn.Module):
         out = self.fc(out)
         return out
 
+
 def ResNet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
@@ -207,6 +212,7 @@ class L2Norm(nn.Module):
         return x
 
     # Auxillary Convolution Layers
+
 
 def extra(net):
     layers = []
@@ -237,6 +243,7 @@ def extra(net):
                   conv10_2, conv11_1, conv11_2, conv12_1, conv12_2]
 
     return layers
+
 
 # Creating/Modifying location and confidence layers
 def feature_extractor(ver, extral, bboxes, num_classes):
@@ -278,13 +285,13 @@ class RES18_SSD(nn.Module):
             resnet.load_state_dict(net)
 
         self.res = nn.Sequential(*list(resnet.children())[:-2],
-            #*list(resnet.children())[:-2],
-            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
-            nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(1024, 1024, kernel_size=1),
-            nn.ReLU(inplace=True)
-        )
+                                 # *list(resnet.children())[:-2],
+                                 nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+                                 nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6),
+                                 nn.ReLU(inplace=True),
+                                 nn.Conv2d(1024, 1024, kernel_size=1),
+                                 nn.ReLU(inplace=True)
+                                 )
         self.extras = nn.ModuleList(self.extra_list)
         self.loc = nn.ModuleList(self.loc_layers_list)
         self.conf = nn.ModuleList(self.conf_layers_list)
@@ -302,7 +309,7 @@ class RES18_SSD(nn.Module):
         source = []
         loc = []
         conf = []
-        res_source = [5,6]
+        res_source = [5, 6]
         for i, v in enumerate(self.res):
             # print("In forward: x.shape", x.shape)
             x = v(x)
@@ -402,13 +409,14 @@ class MultiBoxEncoder(object):
 
         return boxes
 
+
 # +
 def bbox_iou(box_a, box_b):
     m = box_a.shape[0]
     n = box_b.shape[0]
-    tl = np.maximum(box_a[:, None, :2], box_b[None, :, :2]) # top-left
-    br = np.minimum(box_a[:, None, 2:], box_b[None, :, 2:]) # bottom-right
-    wh = np.maximum(br - tl, 0) # problem was here
+    tl = np.maximum(box_a[:, None, :2], box_b[None, :, :2])  # top-left
+    br = np.minimum(box_a[:, None, 2:], box_b[None, :, 2:])  # bottom-right
+    wh = np.maximum(br - tl, 0)  # problem was here
     inner = wh[:, :, 0] * wh[:, :, 1]
     a = box_a[:, 2:] - box_a[:, :2]
     b = box_b[:, 2:] - box_b[:, :2]
@@ -418,61 +426,11 @@ def bbox_iou(box_a, box_b):
     b = b[None, :]
     return inner / (a + b - inner)
 
-
-def nms(boxes, score, threshold=0.4):
-    sort_ids = np.argsort(score)
-    pick = []
-    while len(sort_ids) > 0:
-        i = sort_ids[-1]
-        pick.append(i)
-        if len(sort_ids) == 1:
-            break
-        sort_ids = sort_ids[:-1]
-        box = boxes[i].reshape(1, 4)
-        ious = bbox_iou(box, boxes[sort_ids]).reshape(-1)
-        sort_ids = np.delete(sort_ids, np.where(ious > threshold)[0])
-
-    return pick
-
-
-def detect(locations, scores, nms_threshold, gt_threshold):
-    scores = scores[:, 1:]
-    keep_boxes = []
-    keep_confs = []
-    keep_labels = []
-
-    for i in range(scores.shape[1]):
-        mask = scores[:, i] >= gt_threshold
-        label_scores = scores[mask, i]
-        label_boxes = locations[mask]
-        if len(label_scores) == 0:
-            continue
-
-        pick = nms(label_boxes, label_scores, threshold=nms_threshold)
-        label_scores = label_scores[pick]
-        label_boxes = label_boxes[pick]
-
-        keep_boxes.append(label_boxes.reshape(-1))
-        keep_confs.append(label_scores)
-        keep_labels.extend([i] * len(label_scores))
-
-    if len(keep_boxes) == 0:
-        return np.array([]), np.array([]), np.array([])
-
-    keep_boxes = np.concatenate(keep_boxes, axis=0).reshape(-1, 4)
-
-    keep_confs = np.concatenate(keep_confs, axis=0)
-    keep_labels = np.array(keep_labels).reshape(-1)
-
-    return keep_boxes, keep_confs, keep_labels
-
-
 def point_form(boxes):
     tl = boxes[:, :2] - boxes[:, 2:] / 2
     br = boxes[:, :2] + boxes[:, 2:] / 2
 
     return np.concatenate([tl, br], axis=1)
-
 
 def hard_negtives(logits, labels, pos, neg_ratio):
     num_batch, num_anchors, num_classes = logits.shape
@@ -493,7 +451,6 @@ def hard_negtives(logits, labels, pos, neg_ratio):
     neg = rank < num_neg.expand_as(rank)
 
     return neg
-
 
 class MultiBoxLoss(nn.Module):
 
@@ -558,7 +515,7 @@ class Config:
     min_size = 300
     # box out image size
     # for ssd_300
-    grids = (38, 19, 10, 5, 3, 1) # feature_maps
+    grids = (38, 19, 10, 5, 3, 1)  # feature_maps
     # for ssd_512
     # controls the number of default boxes
     # grids = (64, 32, 16, 8, 4, 2, 1)
@@ -624,15 +581,15 @@ optimizer = torch.optim.SGD(model.parameters(), lr=hparam.lr, momentum=hparam.mo
                             weight_decay=hparam.weight_decay)
 print("Number of items in train dataloader:", len(train_loader))
 
+
 # -
 def train(model, optimizer, load_model=False, start_epoch=0):
-
-    if load_model==True:
+    if load_model == True:
         list_of_files = glob.glob('weights/res18_ssd/*')
         latest_file = max(list_of_files, key=os.path.getctime)
         model, optimizer, start_epoch, loss = ssdhp.load_checkpoint(path=latest_file,
-                                                         optimizer=optimizer,
-                                                         model=model)
+                                                                    optimizer=optimizer,
+                                                                    model=model)
         start_epoch += 1
 
     for epoch in range(start_epoch, hparam.epochs):
@@ -678,20 +635,20 @@ def train(model, optimizer, load_model=False, start_epoch=0):
                 avg_loss = total_loss / (i + 1)
                 print(
                     'epoch[{}] | batch_idx[{}] | loc_loss [{:.2f}] | cls_loss [{:.2f}] '
-                    '| total_loss [{:.2f}]'.format(epoch,i, avg_loc, avg_cls,  avg_loss))
+                    '| total_loss [{:.2f}]'.format(epoch, i, avg_loc, avg_cls, avg_loss))
         if epoch > 0:
             path = os.path.join('weights/res18_ssd/',
                                 'namp_loss-{:.2f}.pth'.format(total_loss))
-            ssdhp.save_checkpoint(model,optimizer,epoch,total_loss,path)
+            ssdhp.save_checkpoint(model, optimizer, epoch, total_loss, path)
+
 
 def train_amp(model, optimizer, load_model=False, start_epoch=0):
-
-    if load_model==True:
+    if load_model == True:
         list_of_files = glob.glob('weights/res18_ssd/*')
         latest_file = max(list_of_files, key=os.path.getctime)
         model, optimizer, start_epoch, loss = ssdhp.load_checkpoint(path=latest_file,
-                                                         optimizer=optimizer,
-                                                         model=model)
+                                                                    optimizer=optimizer,
+                                                                    model=model)
         start_epoch += 1
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, 0.0005,
@@ -700,7 +657,7 @@ def train_amp(model, optimizer, load_model=False, start_epoch=0):
         steps_per_epoch=int(np.ceil(len(X) / hparam.batch_size)),
     )
     scaler = torch.cuda.amp.GradScaler()
-    for epoch in range(start_epoch,hparam.epochs):
+    for epoch in range(start_epoch, hparam.epochs):
         """
         if e == 77:
             adjust_learning_rate1(optimizer)
@@ -747,17 +704,18 @@ def train_amp(model, optimizer, load_model=False, start_epoch=0):
                 avg_loss = total_loss / (i + 1)
                 print(
                     'epoch[{}] | batch_idx[{}] | loc_loss [{:.2f}] | '
-                    'cls_loss [{:.2f}] | total_loss [{:.2f}]'.format(epoch, i,avg_loc,
-                                                                     avg_cls,avg_loss))
+                    'cls_loss [{:.2f}] | total_loss [{:.2f}]'.format(epoch, i, avg_loc,
+                                                                     avg_cls, avg_loss))
         if epoch >= 0:
             """torch.save(model.state_dict(), os.path.join(hparam.save_folder,
                                                         'loss-{:.2f}.pth'.format(total_loss)))"""
             path = os.path.join('weights/res18_ssd/',
-                                'amp_loss-{:.2f}_epoch--{:.2f}.pth'.format(total_loss,epoch))
-            ssdhp.save_checkpoint(model,optimizer,epoch,total_loss,path)
+                                'amp_loss-{:.2f}_epoch--{:.2f}.pth'.format(total_loss, epoch))
+            ssdhp.save_checkpoint(model, optimizer, epoch, total_loss, path)
+
 
 start_time = time.time()
-train(model,optimizer)
+train(model, optimizer)
 exec_time = time.time() - start_time
 exec_time = time.strftime("%H:%M:%S", time.gmtime(exec_time))
 print("Training execution time(Without AMP): ", exec_time, " seconds")

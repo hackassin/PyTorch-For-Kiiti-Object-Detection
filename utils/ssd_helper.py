@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import cv2
+import os
+import shutil
 
 def point_form(boxes):
     tl = boxes[:, :2] - boxes[:, 2:]/2
@@ -18,14 +20,12 @@ def detection_collate(batch):
     return torch.stack(imgs), np.array(targets)
 
 def bbox_iou(box_a, box_b):   
-    m = box_a.shape[0]
-    n = box_b.shape[0]
+    #m = box_a.shape[0]
+    #n = box_b.shape[0]
 
     tl = np.maximum(box_a[:, None, :2], box_b[None, :, :2])
     br = np.minimum(box_a[:, None, 2:], box_b[None, :, 2:])
-
     wh = np.maximum(br-tl, 0)
-    
     inner = wh[:, :, 0]*wh[:, :, 1]
 
     a = box_a[:, 2:] - box_a[:, :2]
@@ -41,8 +41,6 @@ def bbox_iou(box_a, box_b):
 
 
 def nms(boxes, score, threshold=0.4):
-   
-
     sort_ids = np.argsort(score)
     pick = []
     while len(sort_ids) > 0:
@@ -77,7 +75,6 @@ def detect(locations, scores, nms_threshold, gt_threshold):
         pick = nms(label_boxes, label_scores, threshold=nms_threshold)
         label_scores = label_scores[pick]
         label_boxes = label_boxes[pick]
-        
 
         keep_boxes.append(label_boxes.reshape(-1))
         keep_confs.append(label_scores)
@@ -85,15 +82,13 @@ def detect(locations, scores, nms_threshold, gt_threshold):
     
     if len(keep_boxes) == 0:
         return np.array([]), np.array([]), np.array([])
-        
-    
+
     keep_boxes = np.concatenate(keep_boxes, axis=0).reshape(-1, 4)
 
     keep_confs = np.concatenate(keep_confs, axis=0)
     keep_labels = np.array(keep_labels).reshape(-1)
 
     return keep_boxes, keep_confs, keep_labels
-
 
 def draw_rectangle(src_img, labels, conf, locations, label_map):
     
@@ -115,3 +110,22 @@ def draw_rectangle(src_img, labels, conf, locations, label_map):
     img = img[:, :, ::-1]
 
     return img
+
+def save_checkpoint(model, optimizer, epoch, loss, path):
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss':loss
+    }, path)
+
+def load_checkpoint(path, model, optimizer):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch = checkpoint['epoch']
+    loss = checkpoint['loss']
+    return (model, optimizer, epoch, loss)
+
+def evaluator(eval_df):
+    return None
